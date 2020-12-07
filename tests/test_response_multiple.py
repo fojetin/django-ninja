@@ -28,11 +28,16 @@ def check_default_schema(request, status_code: int):
 
 
 @api.get("/check_range_schema", response={200: int, range(300, 500): bool})
-def check_many_codes(request, status_code: int):
+def check_range_code(request, status_code: int):
     if status_code == 200:
         return status_code, status_code
     else:
         return status_code, False
+
+
+@api.get("/check_step_range_schema", response={range(300, 500, 2): int})
+def check_step_range_code(request, status_code: int):
+    return status_code, status_code
 
 
 @api.get("/check_single_with_status", response=int)
@@ -127,6 +132,7 @@ def test_schema():
         ("/api/check_union", {200, 400}),
         ("/api/check_default_schema", {200, 'XXX'}),
         ("/api/check_range_schema", {200, '300 - 500'}),
+        ("/api/check_step_range_schema", {'300 - 500, step: 2'})
     ]
     schema = api.get_openapi_schema()
 
