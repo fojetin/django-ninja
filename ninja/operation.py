@@ -1,10 +1,12 @@
-import pydantic
+from copy import copy
+from typing import Any, Callable, List, Optional, Sequence, Union
+
 import django
+import pydantic
 from django.http import HttpResponse, HttpResponseNotAllowed
-from typing import Callable, List, Any, Union, Optional, Sequence
-from ninja.responses import Response
-from ninja.errors import InvalidInput, ConfigError
 from ninja.constants import NOT_SET
+from ninja.errors import ConfigError, InvalidInput
+from ninja.responses import Response
 from ninja.schema import Schema
 from ninja.signature import ViewSignature, is_async
 from ninja.utils import check_csrf
@@ -92,10 +94,25 @@ class Operation:
         if isinstance(result, tuple) and len(result) == 2:
             status = result[0]
             result = result[1]
+
         if isinstance(response_model, dict):
+            default_model = response_model.get(None)
             if status not in response_model.keys():
-                raise ConfigError(f"Schema for status {status} is not set in response")
-            response_model = response_model[status]
+                for s in response_model.keys():
+                    if isinstance(s, range):
+                        if status in s:
+                            # range
+                            response_model = response_model[s]
+                            break
+                else:
+                    if default_model:
+                        # None
+                        response_model = default_model
+                    else:
+                        raise ConfigError(f"Schema for status {status} is not set in response")
+            else:
+                # int code
+                response_model = response_model[status]
 
         resp_object = ResponseObject(result)
         # ^ we need object because getter_dict seems work only with from_orm
@@ -117,10 +134,10 @@ class Operation:
         return values, errors
 
     def _create_response_model_multiple(self, response_param):
-        # TODO: do not modify response_param, return copy instead
-        for status, model in response_param.items():
-            response_param[status] = self._create_response_model(model)
-        return response_param
+        response_model_multiple = copy(response_param)
+        for status, model in response_model_multiple.items():
+            response_model_multiple[status] = self._create_response_model(model)
+        return response_model_multiple
 
     def _create_response_model(self, response_param):
         if response_param is None:

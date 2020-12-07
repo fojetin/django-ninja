@@ -19,6 +19,22 @@ def check_int2(request):
     return 200, "str"
 
 
+@api.get("/check_default_schema", response={200: int, None: bool})
+def check_default_schema(request, status_code: int):
+    if status_code == 200:
+        return status_code, "1"
+    else:
+        return status_code, False
+
+
+@api.get("/check_range_schema", response={200: int, range(300, 500): bool})
+def check_many_codes(request, status_code: int):
+    if status_code == 200:
+        return status_code, status_code
+    else:
+        return status_code, False
+
+
 @api.get("/check_single_with_status", response=int)
 def check_single_with_status(request):
     return 302, 1
@@ -87,6 +103,11 @@ client = NinjaClient(api)
         ("/check_union?q=0", 200, 1),
         ("/check_union?q=1", 200, {"id": 1, "name": "John"}),
         ("/check_union?q=2", 400, {"detail": "error"}),
+        ("/check_default_schema?status_code=200", 200, 1),
+        ("/check_default_schema?status_code=302", 302, False),
+        ("/check_default_schema?status_code=404", 404, False),
+        ("/check_range_schema?status_code=200", 200, 200),
+        ("/check_range_schema?status_code=404", 404, False),
     ],
 )
 def test_responses(path, expected_status, expected_response):
@@ -104,6 +125,8 @@ def test_schema():
         ("/api/check_model", {200, 202}),
         ("/api/check_list_model", {200}),
         ("/api/check_union", {200, 400}),
+        ("/api/check_default_schema", {200, 'XXX'}),
+        ("/api/check_range_schema", {200, '300 - 500'}),
     ]
     schema = api.get_openapi_schema()
 

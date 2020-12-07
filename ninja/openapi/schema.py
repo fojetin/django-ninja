@@ -123,17 +123,23 @@ class OpenAPISchema(OrderedDict):
                         "content": {"application/json": {"schema": schema}},
                     }
                 }
-
             responses = {}
             for status, model in operation.response_model.items():
                 schema, _ = self._create_schema_from_model(model)
+                if isinstance(status, type(None)):
+                    status = 'XXX'
+                    description = 'OK'
+                elif isinstance(status, range):
+                    step_info = f', step: {status.step}' if status.step != 1 else ''
+                    status = f'{status.start} - {status.stop}{step_info}'
+                    description = 'OK'
+                else:
+                    description = 'OK' if status > 100 and status < 300 else 'Error'
                 responses.update(
                     {
                         status: {
-                            "description": "OK"
-                            if status > 100 and status < 300
-                            else "Error",
-                            "content": {"application/json": {"schema": schema}},
+                            'description': description,
+                            'content': {'application/json': {'schema': schema}},
                         }
                     }
                 )
